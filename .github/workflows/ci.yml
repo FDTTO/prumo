@@ -7,10 +7,16 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # Prumo's own checks, in the Chrome the runner image ships: the command
-  # line against a fixture site, every guard both ways.
+  # Prumo's own checks against a fixture site, every guard both ways, in the
+  # browser each runner image ships: Chrome on Linux, Edge on Windows, where
+  # the browser hands off to another process and holds its profile locked.
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        python: [ '3.10', '3.12' ]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -24,7 +30,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python }}
 
       - name: Install Pillow, for diff
         run: pip install pillow

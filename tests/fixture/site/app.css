@@ -1,5 +1,6 @@
-/* A rule the page uses, one it never does, and a focus ring. */
+/* A rule the page uses, one it never does, a focus ring and a hover. */
 .status { color: rgb(1, 2, 3); }
 .never { color: rgb(255, 0, 0); }
 button:focus-visible { outline: 3px solid rgb(0, 0, 255); }
 .box { padding: 10px; }
+.box:hover { background-color: rgb(9, 9, 9); }

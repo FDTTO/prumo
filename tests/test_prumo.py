@@ -79,8 +79,22 @@ class PrumoTest(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("PASS saves", out)
         self.assertIn("375px", out)
-        self.assertIn("PASS focus", out)
-        self.assertIn("PASS allowed", out)
+        for scenario in ("focus", "allowed", "hover", "virtual", "tools"):
+            self.assertIn("PASS " + scenario, out)
+
+    def test_run_prints_the_log_and_captures_a_region(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow is not installed")
+        out = os.path.join(self.work, "shot")
+        code, printed = self.prumo("run", os.path.join(self.work, "scenarios", "saves.js"),
+                                   "--clip", "({x:0,y:0,width:100,height:50})", "--out", out)
+        self.assertEqual(code, 0, printed)
+        log = json.loads(printed[:printed.rindex("}") + 1])
+        self.assertEqual([c["name"] for c in log["checks"]], ["the status says Saved"])
+        with Image.open(out + "_0.png") as shot:
+            self.assertEqual(shot.size, (200, 100), "a region is captured at twice its size")
 
     def test_each_kind_of_failure_fails_and_says_why(self):
         code, out = self.prumo("suite", os.path.join(self.work, "failing"))
