@@ -14,12 +14,28 @@ OUT = os.path.join(tempfile.gettempdir(), "prumo")
 # How long a profile may stay locked after its run. With a JVM and several
 # browsers running, Windows was measured holding one past five seconds.
 RECLAIM_SECONDS = 30
+# The runner relies on the WebSocket and fetch that Node ships from 22 on.
+NODE_MAJOR = 22
+_node_checked = []
 
 
 def script(name):
     """A file of browser/, e.g. "core.js" or "adapters/swagger-ui.js"."""
     with open(os.path.join(BROWSER_DIR, name), encoding="utf-8") as source:
         return source.read()
+
+
+def ensure_node():
+    """Stops with what to install, rather than a traceback, when Node is
+    missing or older than the runner needs. Checked once per process."""
+    if _node_checked:
+        return
+    if not shutil.which("node"):
+        raise SystemExit("Prumo needs Node %d or later on the PATH" % NODE_MAJOR)
+    version = subprocess.run(["node", "--version"], capture_output=True, text=True).stdout.strip()
+    if int(version.lstrip("v").split(".")[0]) < NODE_MAJOR:
+        raise SystemExit("Prumo needs Node %d or later; this is %s" % (NODE_MAJOR, version))
+    _node_checked.append(version)
 
 
 def run(url, out, wait=30000, width=1280, height=1400, virtual=None, clips=(), inject=None, coverage=None):
@@ -29,6 +45,7 @@ def run(url, out, wait=30000, width=1280, height=1400, virtual=None, clips=(), i
     The browser profile is made here and handed to the runner, so it is
     removed even when the runner is killed or gives up on it; one that
     cannot be removed fails the run instead of filling the disk unnoticed."""
+    ensure_node()
     os.makedirs(os.path.dirname(out), exist_ok=True)
     profile = tempfile.mkdtemp(prefix="prumo-profile-")
     command = ["node", RUNNER, url, "--out", out, "--wait", str(wait), "--width", str(width), "--height", str(height),
