@@ -198,6 +198,10 @@ the project's code.
   down. The runner uses port 0 and reads `DevToolsActivePort`.
 - **`var name` at a script's top level is `window.name`**, which turns a
   function into a string. Scenarios run in their own function scope.
+- **A local server's default queue of five connections** drops some of the
+  connections browsers open at once, and a page hangs loading. `visit`
+  serves with a queue of 64, and a page that produced no log says where it
+  stopped: its URL, whether it finished loading, whether Prumo's core ran.
 - **Existing in the DOM is not being visible.** A 0x0 dialog inside a
   hidden ancestor passes any existence check. Assert painted size and hit
   testing for anything a reader must see.

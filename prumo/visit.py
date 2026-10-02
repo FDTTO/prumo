@@ -24,7 +24,11 @@ class _QuietHandler(SimpleHTTPRequestHandler):
 
 
 class _QuietServer(ThreadingHTTPServer):
-    """A browser closing a connection mid-answer is not a failure of the site."""
+    """A browser closing a connection mid-answer is not a failure of the site.
+
+    A browser opens several connections per page at once; past the default
+    queue of 5, the rest went unanswered and a page could hang loading."""
+    request_queue_size = 64
 
     def handle_error(self, request, client_address):
         if not isinstance(sys.exc_info()[1], ConnectionError):

@@ -27,6 +27,15 @@ class _Quiet(SimpleHTTPRequestHandler):
         pass
 
 
+class _Server(ThreadingHTTPServer):
+    """Stands in for the app: answers every connection the browsers open at
+    once, as a real server does, and is quiet about the ones they close."""
+    request_queue_size = 64
+
+    def handle_error(self, request, client_address):
+        pass
+
+
 class PrumoTest(unittest.TestCase):
 
     @classmethod
@@ -35,7 +44,7 @@ class PrumoTest(unittest.TestCase):
         cls.work = tempfile.mkdtemp(prefix="prumo-test-")
         shutil.copytree(FIXTURE, cls.work, dirs_exist_ok=True)
         cls.site = os.path.join(cls.work, "site")
-        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(_Quiet, directory=cls.site))
+        cls.server = _Server(("127.0.0.1", 0), functools.partial(_Quiet, directory=cls.site))
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
         cls.base = "http://127.0.0.1:%d" % cls.server.server_address[1]
         cls.config = cls.write_config("prumo.json", "harness.html")

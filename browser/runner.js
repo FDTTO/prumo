@@ -263,7 +263,10 @@ function shipped(sourceUrl) {
       }
     }
 
-    const log = await evaluate('JSON.stringify(window.__log || null)');
+    // A page with no log says where it ended up, so the cause can be read off
+    // the result: another URL, a page still loading, a core that never ran.
+    const log = await evaluate(`JSON.stringify(window.__log || { checks: [], errors: ['the page produced no log: '
+      + JSON.stringify({ at: location.href, readyState: document.readyState, core: typeof window.V === 'object' })] })`);
     fs.writeFileSync(`${options.out}.json`, log || 'null');
     if (options.coverage) {
       // An @import'ed sheet is a sheet of its own, under its own URL.
