@@ -104,8 +104,9 @@ def report(coverage_files, publish_dir):
 
     print(f"\ncoverage across {len(coverage_files)} runs")
     print(f"  styles      {len(rules) - len(unused_rules)} of {len(rules)} rules applied at least once")
+    modules = len({key[0] for key in named})
     print(f"  scripts     {len(named) - len(unrun)} of {len(named)} functions in "
-          f"{len({key[0] for key in named})} modules ran at least once")
+          f"{modules} module{'' if modules == 1 else 's'} ran at least once")
     if unused_rules:
         print("\n  rules never applied:")
         for file, start in unused_rules:
