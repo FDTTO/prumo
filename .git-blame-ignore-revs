@@ -1,0 +1,5 @@
+# Formatting only: git blame skips these (GitHub reads this file; locally,
+# git config blame.ignoreRevsFile .git-blame-ignore-revs).
+
+# chore: format the scripts and the Python, and check both in CI
+28f2379c6dc80da2a887834434d1873bc93620f5
