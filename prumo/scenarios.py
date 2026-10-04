@@ -115,17 +115,21 @@ def report(stem, width, log, verbose):
     if not log.get("done"):
         errors = errors + ["scenario did not finish within its wait (no done())"]
     ok = bool(checks) and len(passed) == len(checks) and not errors
-    print("%s %-22s %5dpx  %d/%d checks%s" % ("PASS" if ok else "FAIL", stem, width, len(passed), len(checks),
-                                             "  %d console errors" % len(errors) if errors else ""))
+    # A wait that ran out is shown even when the run passes: a condition that
+    # never holds is a sleep in disguise, and the checks after it pass anyway.
+    waited_out = log.get("timeouts") or []
+    print("%s %-22s %5dpx  %d/%d checks%s%s" % ("PASS" if ok else "FAIL", stem, width, len(passed), len(checks),
+                                               "  %d console errors" % len(errors) if errors else "",
+                                               "  %d wait%s ran out" % (len(waited_out), "" if len(waited_out) == 1 else "s")
+                                               if waited_out else ""))
     for c in checks:
         if verbose or not c["pass"]:
             detail = "" if c["pass"] or c["detail"] is None else "  -> " + json.dumps(c["detail"], ensure_ascii=False)
             print("       %s %s%s" % ("ok  " if c["pass"] else "FAIL", c["name"], detail))
     for error in errors:
         print("       error: " + error.splitlines()[0][:200])
-    if not ok:
-        for waited in log.get("timeouts") or []:
-            print("       timed out waiting for: " + waited)
+    for waited in waited_out:
+        print("       timed out waiting for: " + waited)
     if not checks and not errors:
         print("       (no checks recorded)")
     return ok

@@ -96,6 +96,12 @@ class PrumoTest(unittest.TestCase):
         with Image.open(out + "_0.png") as shot:
             self.assertEqual(shot.size, (200, 100), "a region is captured at twice its size")
 
+    def test_a_wait_that_ran_out_is_shown_even_when_the_run_passes(self):
+        code, out = self.prumo("suite", "--only", "slack")
+        self.assertEqual(code, 0, out)
+        self.assertRegex(out, r"PASS slack +1280px +1/1 checks +1 wait ran out")
+        self.assertIn("timed out waiting for: function () { return !!document.querySelector('#never-there'); }", out)
+
     def test_each_kind_of_failure_fails_and_says_why(self):
         code, out = self.prumo("suite", os.path.join(self.work, "failing"))
         self.assertEqual(code, 1, out)

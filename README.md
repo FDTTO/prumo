@@ -107,7 +107,7 @@ The page a scenario runs in is served by the app itself, on the same origin as e
 
 **The real clock by default.** A virtual-time budget skips idle time, so a poll that backs off 1s, 2s, 4s spends its whole schedule in under a second and reports a state no reader ever sees. `--virtual` stays for long, mostly idle scenarios, and cannot judge animation frames.
 
-**Conditions, not clocks.** Every wait in the core and the adapters is on a condition. A run under `--coverage`, which slows the page, is the stress test that finds the clocks left in a scenario, and in the code under test.
+**Conditions, not clocks.** Every wait in the core and the adapters is on a condition. A run under `--coverage`, which slows the page, is the stress test that finds the clocks left in a scenario, and in the code under test. A wait that runs out is reported even when the run passes (`PASS ... 1 wait ran out`): a condition that never holds is a sleep in disguise, and the checks after it pass anyway.
 
 **Trusted input.** Chromium shows `:focus-visible` only after real keyboard input and `:hover` only under a real pointer, so a synthetic event from inside the page proves neither. Keys and the pointer go over the DevTools protocol, and scenarios that send them run alone, since browsers in parallel contend for them.
 
