@@ -16,6 +16,7 @@ It brings the real page to that state and calls measure(). The project's
 include files run first, for helpers its states share. Roles are
 [role, reference selector, page selector]; `selector|n` picks the n-th match.
 """
+
 import json
 import os
 import re
@@ -50,28 +51,37 @@ def reference(config, state):
 
 
 def _measuring(config, exact):
-    return (("window.__fidelityExact = true;" if exact else "") + browser.script("fidelity-probe.js")
-            + page.read(config.fidelity.roles))
+    return (
+        ("window.__fidelityExact = true;" if exact else "")
+        + browser.script("fidelity-probe.js")
+        + page.read(config.fidelity.roles)
+    )
 
 
 def measure_reference(config, state, out, exact, shots):
     width, height = config.fidelity.viewport
     probe = out + ".inject.js"
-    hide = "".join(f"document.querySelectorAll({json.dumps(s)}).forEach(function (n) {{ n.style.display = 'none'; }});"
-                   for s in config.fidelity.hide)
+    hide = "".join(
+        f"document.querySelectorAll({json.dumps(s)}).forEach(function (n) {{ n.style.display = 'none'; }});"
+        for s in config.fidelity.hide
+    )
     with open(probe, "w", encoding="utf-8") as target:
-        target.write(_measuring(config, exact)
-                     # What the reference page draws around the design (a state picker) is not the design.
-                     + f"addEventListener('DOMContentLoaded', function () {{ {hide} }});"
-                     + "addEventListener('load', function () { setTimeout(function () {"
-                       " window.__log = { fidelity: window.__fidelity('mock', window.__fidelityRoles), done: true };"
-                       f" }}, {SETTLE_MS}); }});")
+        target.write(
+            _measuring(config, exact)
+            # What the reference page draws around the design (a state picker) is not the design.
+            + f"addEventListener('DOMContentLoaded', function () {{ {hide} }});"
+            + "addEventListener('load', function () { setTimeout(function () {"
+            " window.__log = { fidelity: window.__fidelity('mock', window.__fidelityRoles), done: true };"
+            f" }}, {SETTLE_MS}); }});"
+        )
     clips = [f"({{x:0,y:0,width:{width},height:{height}}})"] if shots else []
     try:
         # Webfonts come from the network, and a slow load can push the load
         # event past the wait; the log is then empty and the run is retried.
         for _ in range(3):
-            log = browser.run(reference(config, state), out, wait=8000, width=width, height=height, clips=clips, inject=probe)
+            log = browser.run(
+                reference(config, state), out, wait=8000, width=width, height=height, clips=clips, inject=probe
+            )
             if "fidelity" in log:
                 return log["fidelity"]
     finally:
@@ -81,11 +91,13 @@ def measure_reference(config, state, out, exact, shots):
 
 def measure_page(config, state, out, exact, shots):
     width, height = config.fidelity.viewport
-    body = (_measuring(config, exact)
-            + "".join(page.read(path) + "\n" for path in config.fidelity.include)
-            + "var measure = function () { setTimeout(function () {"
-              f" L('fidelity', window.__fidelity('real', window.__fidelityRoles)); done(); }}, {SETTLE_MS}); }};\n"
-            + page.read(os.path.join(config.fidelity.states, state + ".js")))
+    body = (
+        _measuring(config, exact)
+        + "".join(page.read(path) + "\n" for path in config.fidelity.include)
+        + "var measure = function () { setTimeout(function () {"
+        f" L('fidelity', window.__fidelity('real', window.__fidelityRoles)); done(); }}, {SETTLE_MS}); }};\n"
+        + page.read(os.path.join(config.fidelity.states, state + ".js"))
+    )
     name = "prumo-fidelity.html"
     clips = [f"({{x:0,y:0,width:{width},height:{height}}})"] if shots else []
     with page.published(config, {name: page.build(config, body)}):
@@ -106,8 +118,12 @@ def canonical(value):
         if a and float(a) < 1:
             return f"rgba({r}, {g}, {b}, {round(float(a), 3):g})"
         return f"rgb({r}, {g}, {b})"
-    return re.sub(r"rgba\(([^)]*), ([\d.]+)\)", lambda m: f"rgba({m.group(1)}, {round(float(m.group(2)), 3):g})",
-                  SRGB.sub(rgba, value))
+
+    return re.sub(
+        r"rgba\(([^)]*), ([\d.]+)\)",
+        lambda m: f"rgba({m.group(1)}, {round(float(m.group(2)), 3):g})",
+        SRGB.sub(rgba, value),
+    )
 
 
 def same(a, b, exact):
@@ -140,8 +156,11 @@ def differences(mock, real, only=None, every=False, exact=False):
         if m is None or r is None:
             found.append((role, ["    drawn only in the " + ("page" if m is None else "reference")]))
             continue
-        lines = [f"    {k:<16} {m[k]}  ->  {r.get(k)}" for k in m
-                 if every or (compared(k, m, r) and not same(m[k], r.get(k), exact))]
+        lines = [
+            f"    {k:<16} {m[k]}  ->  {r.get(k)}"
+            for k in m
+            if every or (compared(k, m, r) and not same(m[k], r.get(k), exact))
+        ]
         if lines:
             found.append((role, lines))
     return found, absent

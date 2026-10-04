@@ -1,7 +1,9 @@
 // What the fixture page does: Save shows "Saved" a moment later. decorate()
 // runs but nothing checks what it does; never() is never called.
 function save() {
-  setTimeout(function () { document.querySelector('.status').textContent = 'Saved'; }, 300);
+  setTimeout(function () {
+    document.querySelector('.status').textContent = 'Saved';
+  }, 300);
 }
 
 function decorate() {

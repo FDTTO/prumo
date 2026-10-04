@@ -1,2 +1,4 @@
 // @reference reference.html
-V.until(function () { return !!document.querySelector('.box'); }, measure);
+V.until(function () {
+  return !!document.querySelector('.box');
+}, measure);

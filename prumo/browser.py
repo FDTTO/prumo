@@ -1,4 +1,5 @@
 """One page in a headless Chromium, through browser/runner.js."""
+
 import json
 import os
 import shutil
@@ -48,8 +49,21 @@ def run(url, out, wait=30000, width=1280, height=1400, virtual=None, clips=(), i
     ensure_node()
     os.makedirs(os.path.dirname(out), exist_ok=True)
     profile = tempfile.mkdtemp(prefix="prumo-profile-")
-    command = ["node", RUNNER, url, "--out", out, "--wait", str(wait), "--width", str(width), "--height", str(height),
-               "--profile", profile]
+    command = [
+        "node",
+        RUNNER,
+        url,
+        "--out",
+        out,
+        "--wait",
+        str(wait),
+        "--width",
+        str(width),
+        "--height",
+        str(height),
+        "--profile",
+        profile,
+    ]
     if virtual:
         command += ["--virtual", str(virtual)]
     if inject:
@@ -95,8 +109,15 @@ def reclaim(profile):
 def _kill_using(profile):
     """Only the processes started on this profile, whatever the browser."""
     if sys.platform == "win32":
-        subprocess.run(["powershell", "-NoProfile", "-Command",
-                        f"Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -like '*{profile}*' }} "
-                        "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"], capture_output=True)
+        subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                f"Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -like '*{profile}*' }} "
+                "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+            ],
+            capture_output=True,
+        )
     else:
         subprocess.run(["pkill", "-KILL", "-f", profile], capture_output=True)

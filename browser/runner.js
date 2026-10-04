@@ -39,8 +39,8 @@ const { values: options, positionals } = parseArgs({
     motion: { type: 'boolean', default: false },
     browser: { type: 'string', default: process.env.PRUMO_BROWSER },
     profile: { type: 'string' },
-    clip: { type: 'string', multiple: true, default: [] }
-  }
+    clip: { type: 'string', multiple: true, default: [] },
+  },
 });
 const [url] = positionals;
 if (!url || !options.out) {
@@ -49,34 +49,49 @@ if (!url || !options.out) {
 }
 
 const INSTALLED = {
-  win32: ['C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'],
+  win32: [
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  ],
   linux: ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/microsoft-edge'],
-  darwin: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-           '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge']
+  darwin: [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+  ],
 };
 const BROWSER = options.browser || (INSTALLED[process.platform] || []).find((candidate) => fs.existsSync(candidate));
 if (!BROWSER || !fs.existsSync(BROWSER)) {
-  console.log(BROWSER ? `error: the browser points to nothing: ${BROWSER}`
-                      : 'error: no Chromium browser found; pass --browser or set PRUMO_BROWSER');
+  console.log(
+    BROWSER
+      ? `error: the browser points to nothing: ${BROWSER}`
+      : 'error: no Chromium browser found; pass --browser or set PRUMO_BROWSER',
+  );
   process.exit(1);
 }
 const owned = !options.profile;
 const profile = options.profile || fs.mkdtempSync(path.join(os.tmpdir(), 'prumo-'));
 
-const child = spawn(BROWSER, [
-  '--headless=new', '--disable-gpu', '--hide-scrollbars',
-  // Settled states by default; --motion keeps transitions, to measure one.
-  ...(options.motion ? [] : ['--force-prefers-reduced-motion']),
-  // Port 0: the browser picks a free port and writes it to DevToolsActivePort
-  // in the profile. A fixed port can attach to a previous run's instance that
-  // is still shutting down.
-  '--window-size=1280,1400', '--remote-debugging-port=0', `--user-data-dir=${profile}`,
-  // CI runners on recent Ubuntu block the unprivileged user namespaces
-  // Chrome's sandbox needs; the page under test is the project's own.
-  ...(process.env.CI ? ['--no-sandbox'] : []),
-  'about:blank'
-], { stdio: 'ignore' });
+const child = spawn(
+  BROWSER,
+  [
+    '--headless=new',
+    '--disable-gpu',
+    '--hide-scrollbars',
+    // Settled states by default; --motion keeps transitions, to measure one.
+    ...(options.motion ? [] : ['--force-prefers-reduced-motion']),
+    // Port 0: the browser picks a free port and writes it to DevToolsActivePort
+    // in the profile. A fixed port can attach to a previous run's instance that
+    // is still shutting down.
+    '--window-size=1280,1400',
+    '--remote-debugging-port=0',
+    `--user-data-dir=${profile}`,
+    // CI runners on recent Ubuntu block the unprivileged user namespaces
+    // Chrome's sandbox needs; the page under test is the project's own.
+    ...(process.env.CI ? ['--no-sandbox'] : []),
+    'about:blank',
+  ],
+  { stdio: 'ignore' },
+);
 // Unhandled, a failed launch kills this process before the profile is
 // removed; handled, the run waits out its ceiling and cleans up as usual.
 child.on('error', (error) => console.log('error: the browser did not start: ' + error.message));
@@ -85,8 +100,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Keys a scenario can press: name -> [key, code, virtual key code, text].
 const KEYS = {
-  Tab: ['Tab', 'Tab', 9, ''], Enter: ['Enter', 'Enter', 13, '\r'], Escape: ['Escape', 'Escape', 27, ''],
-  Space: [' ', 'Space', 32, ' '], ArrowDown: ['ArrowDown', 'ArrowDown', 40, ''], ArrowUp: ['ArrowUp', 'ArrowUp', 38, '']
+  Tab: ['Tab', 'Tab', 9, ''],
+  Enter: ['Enter', 'Enter', 13, '\r'],
+  Escape: ['Escape', 'Escape', 27, ''],
+  Space: [' ', 'Space', 32, ' '],
+  ArrowDown: ['ArrowDown', 'ArrowDown', 40, ''],
+  ArrowUp: ['ArrowUp', 'ArrowUp', 38, ''],
 };
 
 // "Shift+Tab" style names add modifiers (Alt 1, Ctrl 2, Meta 4, Shift 8).
@@ -121,7 +140,9 @@ async function target() {
       const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
       const page = list.find((t) => t.type === 'page');
       if (page) return { ws: page.webSocketDebuggerUrl, port };
-    } catch { /* not up yet */ }
+    } catch {
+      /* not up yet */
+    }
     await sleep(200);
   }
   throw new Error('DevTools endpoint never came up');
@@ -149,30 +170,48 @@ async function shutdown(port) {
       browser.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
       await sleep(300);
     }
-  } catch { /* the forceful path below still runs */ }
+  } catch {
+    /* the forceful path below still runs */
+  }
   // A browser that never became controllable may still be starting, and would
   // recreate the profile after it was removed, so it is killed first.
   if (!port) killProfileProcesses();
   if (!owned) return;
   for (let i = 0; i < 20; i++) {
-    try { fs.rmSync(profile, { recursive: true, force: true }); break; } catch { await sleep(250); }
+    try {
+      fs.rmSync(profile, { recursive: true, force: true });
+      break;
+    } catch {
+      await sleep(250);
+    }
   }
   if (fs.existsSync(profile)) {
     killProfileProcesses();
-    try { fs.rmSync(profile, { recursive: true, force: true }); } catch { /* reported below */ }
+    try {
+      fs.rmSync(profile, { recursive: true, force: true });
+    } catch {
+      /* reported below */
+    }
   }
   if (!port) await sleep(1000);
   if (fs.existsSync(profile)) {
     killProfileProcesses();
-    try { fs.rmSync(profile, { recursive: true, force: true }); } catch { console.log('error: profile left behind at ' + profile); }
+    try {
+      fs.rmSync(profile, { recursive: true, force: true });
+    } catch {
+      console.log('error: profile left behind at ' + profile);
+    }
   }
 }
 
 // Only the processes started with this run's profile, whatever the browser.
 function killProfileProcesses() {
   if (process.platform === 'win32') {
-    spawnSync('powershell', ['-NoProfile', '-Command',
-      `Get-CimInstance Win32_Process -Filter "Name='${path.basename(BROWSER)}'" | Where-Object { $_.CommandLine -like '*${profile}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`]);
+    spawnSync('powershell', [
+      '-NoProfile',
+      '-Command',
+      `Get-CimInstance Win32_Process -Filter "Name='${path.basename(BROWSER)}'" | Where-Object { $_.CommandLine -like '*${profile}*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`,
+    ]);
   } else {
     child.kill('SIGKILL');
     spawnSync('pkill', ['-KILL', '-f', profile]);
@@ -203,12 +242,25 @@ function shipped(sourceUrl) {
     const stylesheets = new Map();
     ws.addEventListener('message', (m) => {
       const msg = JSON.parse(m.data);
-      if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id); }
-      if (msg.method && events.has(msg.method)) { events.get(msg.method)(msg); events.delete(msg.method); }
-      if (msg.method === 'CSS.styleSheetAdded') stylesheets.set(msg.params.header.styleSheetId, msg.params.header.sourceURL);
+      if (msg.id && pending.has(msg.id)) {
+        pending.get(msg.id)(msg);
+        pending.delete(msg.id);
+      }
+      if (msg.method && events.has(msg.method)) {
+        events.get(msg.method)(msg);
+        events.delete(msg.method);
+      }
+      if (msg.method === 'CSS.styleSheetAdded')
+        stylesheets.set(msg.params.header.styleSheetId, msg.params.header.sourceURL);
     });
-    const send = (method, params = {}) => new Promise((r) => { const n = ++id; pending.set(n, r); ws.send(JSON.stringify({ id: n, method, params })); });
-    const evaluate = async (expression) => (await send('Runtime.evaluate', { expression, returnByValue: true })).result.result.value;
+    const send = (method, params = {}) =>
+      new Promise((r) => {
+        const n = ++id;
+        pending.set(n, r);
+        ws.send(JSON.stringify({ id: n, method, params }));
+      });
+    const evaluate = async (expression) =>
+      (await send('Runtime.evaluate', { expression, returnByValue: true })).result.result.value;
 
     await send('Page.enable');
     // --inject runs a script at the start of every document, so a page that
@@ -219,7 +271,12 @@ function shipped(sourceUrl) {
     }
     // --window-size is not honoured for a page opened over the protocol, so
     // the viewport is set here.
-    await send('Emulation.setDeviceMetricsOverride', { width: Number(options.width), height: Number(options.height), deviceScaleFactor: Number(options.dsf), mobile: false });
+    await send('Emulation.setDeviceMetricsOverride', {
+      width: Number(options.width),
+      height: Number(options.height),
+      deviceScaleFactor: Number(options.dsf),
+      mobile: false,
+    });
     // A headless page does not always hold the window's focus, and keys sent
     // to an unfocused page go nowhere. This makes the page behave as focused.
     await send('Emulation.setFocusEmulationEnabled', { enabled: true });
@@ -277,14 +334,25 @@ function shipped(sourceUrl) {
       const functions = (await send('Profiler.takePreciseCoverage')).result.result
         .map((script) => [shipped(script.url), script])
         .filter(([file]) => file && file.endsWith('.js'))
-        .flatMap(([file, script]) => script.functions.map((fn) =>
-          [file, fn.functionName, fn.ranges[0].startOffset, fn.ranges[0].endOffset, fn.ranges[0].count]));
+        .flatMap(([file, script]) =>
+          script.functions.map((fn) => [
+            file,
+            fn.functionName,
+            fn.ranges[0].startOffset,
+            fn.ranges[0].endOffset,
+            fn.ranges[0].count,
+          ]),
+        );
       fs.writeFileSync(`${options.out}.coverage.json`, JSON.stringify({ rules, functions }));
     }
     for (let i = 0; i < options.clip.length; i++) {
       const box = await evaluate(options.clip[i]);
       if (!box) continue;
-      const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { ...box, scale: Number(options['shot-scale']) } });
+      const shot = await send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: true,
+        clip: { ...box, scale: Number(options['shot-scale']) },
+      });
       fs.writeFileSync(`${options.out}_${i}.png`, Buffer.from(shot.result.data, 'base64'));
     }
     console.log('done');

@@ -5,6 +5,7 @@ through. A tool that verifies others has to prove first that it can fail.
 
     python -m unittest discover -s tests -v
 """
+
 import functools
 import glob
 import json
@@ -30,6 +31,7 @@ class _Quiet(SimpleHTTPRequestHandler):
 class _Server(ThreadingHTTPServer):
     """Stands in for the app: answers every connection the browsers open at
     once, as a real server does, and is quiet about the ones they close."""
+
     request_queue_size = 64
 
     def handle_error(self, request, client_address):
@@ -37,7 +39,6 @@ class _Server(ThreadingHTTPServer):
 
 
 class PrumoTest(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.profiles_before = set(glob.glob(os.path.join(tempfile.gettempdir(), "prumo-profile-*")))
@@ -59,19 +60,26 @@ class PrumoTest(unittest.TestCase):
     def write_config(cls, name, harness):
         path = os.path.join(cls.work, name)
         with open(path, "w", encoding="utf-8") as target:
-            json.dump({
-                "base": cls.base,
-                "publish": {"dir": "site", "url": "/"},
-                "harness": harness,
-                "mirror": "/index.html",
-                "scenarios": "scenarios",
-                "fidelity": {"states": "fidelity/states", "roles": "fidelity/roles.js", "viewport": [800, 600]},
-            }, target)
+            json.dump(
+                {
+                    "base": cls.base,
+                    "publish": {"dir": "site", "url": "/"},
+                    "harness": harness,
+                    "mirror": "/index.html",
+                    "scenarios": "scenarios",
+                    "fidelity": {"states": "fidelity/states", "roles": "fidelity/roles.js", "viewport": [800, 600]},
+                },
+                target,
+            )
         return path
 
     def prumo(self, *args, config=None):
-        done = subprocess.run([sys.executable, PRUMO, "--config", config or self.config] + list(args),
-                              capture_output=True, text=True, encoding="utf-8")
+        done = subprocess.run(
+            [sys.executable, PRUMO, "--config", config or self.config] + list(args),
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
         return done.returncode, done.stdout + done.stderr
 
     def test_a_passing_suite_passes(self):
@@ -88,10 +96,16 @@ class PrumoTest(unittest.TestCase):
         except ImportError:
             self.skipTest("Pillow is not installed")
         out = os.path.join(self.work, "shot")
-        code, printed = self.prumo("run", os.path.join(self.work, "scenarios", "saves.js"),
-                                   "--clip", "({x:0,y:0,width:100,height:50})", "--out", out)
+        code, printed = self.prumo(
+            "run",
+            os.path.join(self.work, "scenarios", "saves.js"),
+            "--clip",
+            "({x:0,y:0,width:100,height:50})",
+            "--out",
+            out,
+        )
         self.assertEqual(code, 0, printed)
-        log = json.loads(printed[:printed.rindex("}") + 1])
+        log = json.loads(printed[: printed.rindex("}") + 1])
         self.assertEqual([c["name"] for c in log["checks"]], ["the status says Saved"])
         with Image.open(out + "_0.png") as shot:
             self.assertEqual(shot.size, (200, 100), "a region is captured at twice its size")
@@ -114,7 +128,9 @@ class PrumoTest(unittest.TestCase):
     def test_coverage_names_what_no_scenario_reached_and_only_that(self):
         code, out = self.prumo("suite", "--coverage", "--only", "saves")
         self.assertEqual(code, 0, out)
-        self.assertRegex(out, r"app\.css:3 +\.never")
+        with open(os.path.join(FIXTURE, "site", "app.css"), encoding="utf-8") as css:
+            line = next(n for n, text in enumerate(css, 1) if text.startswith(".never"))
+        self.assertRegex(out, rf"app\.css:{line} +\.never")
         self.assertRegex(out, r"app\.js:\d+ +never")
         self.assertNotRegex(out, r"app\.css:\d+ +\.status")
         self.assertNotRegex(out, r"app\.js:\d+ +save\b")
@@ -125,8 +141,10 @@ class PrumoTest(unittest.TestCase):
         code, out = self.prumo("mutate", "--only", "save,decorate")
         self.assertRegex(out, r"KILLED +app\.js:save")
         self.assertRegex(out, r"SURVIVED +app\.js:decorate")
-        with open(os.path.join(self.site, "app.js"), encoding="utf-8") as served, \
-                open(os.path.join(FIXTURE, "site", "app.js"), encoding="utf-8") as original:
+        with (
+            open(os.path.join(self.site, "app.js"), encoding="utf-8") as served,
+            open(os.path.join(FIXTURE, "site", "app.js"), encoding="utf-8") as original,
+        ):
             self.assertEqual(served.read(), original.read(), "the mutated script was not restored")
 
     def test_fidelity_reports_a_difference_and_not_a_role_neither_side_draws(self):
@@ -147,8 +165,21 @@ class PrumoTest(unittest.TestCase):
         self.assertIn("styles the page differently", out)
 
     def test_visit_checks_a_folder_as_it_is_served(self):
-        done = subprocess.run([sys.executable, PRUMO, "visit", os.path.join(self.work, "scenarios", "saves.js"),
-                               "--serve", self.site, "--at", "/app/"], capture_output=True, text=True, encoding="utf-8")
+        done = subprocess.run(
+            [
+                sys.executable,
+                PRUMO,
+                "visit",
+                os.path.join(self.work, "scenarios", "saves.js"),
+                "--serve",
+                self.site,
+                "--at",
+                "/app/",
+            ],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("PASS saves", done.stdout)
 

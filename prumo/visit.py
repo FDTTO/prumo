@@ -6,6 +6,7 @@ served: a static build, a deployed page, a reference opened from disk. With
 `serve`, a folder is served on a free local port first, under `at`, the way a
 host such as GitHub Pages serves a project under its name.
 """
+
 import contextlib
 import functools
 import os
@@ -28,6 +29,7 @@ class _QuietServer(ThreadingHTTPServer):
 
     A browser opens several connections per page at once; past the default
     queue of 5, the rest went unanswered and a page could hang loading."""
+
     request_queue_size = 64
 
     def handle_error(self, request, client_address):
@@ -62,7 +64,7 @@ def main(scenario, url=None, serve=None, at="/", adapters=(), wait=30000, width=
     with open(probe, "w", encoding="utf-8") as target:
         target.write("\n".join(sources) + f"\n(function () {{\n{page.read(scenario)}\n}})();\n")
     try:
-        with (_served(serve, at) if serve else contextlib.nullcontext(url)) as target_url:
+        with _served(serve, at) if serve else contextlib.nullcontext(url) as target_url:
             log = browser.run(target_url, os.path.join(browser.OUT, "visit"), wait=wait, width=width, inject=probe)
     finally:
         os.remove(probe)

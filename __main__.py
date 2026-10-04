@@ -12,6 +12,7 @@
 PRUMO is this folder. The project is described by the nearest prumo.json above
 the working directory, or --config; `diff` and `visit` need none.
 """
+
 import argparse
 import json
 import os
@@ -84,14 +85,29 @@ def main(argv=None):
         ignore = pixdiff.masked_boxes(args.ignore_from, args.ignore_key, args.scale) if args.ignore_from else ()
         return pixdiff.compare(args.before, args.after, args.out, args.tolerance, ignore)
     if args.command == "visit":
-        return visit.main(args.scenario, url=args.url, serve=args.serve, at=args.at, adapters=args.adapter,
-                          wait=args.wait, width=args.width)
+        return visit.main(
+            args.scenario,
+            url=args.url,
+            serve=args.serve,
+            at=args.at,
+            adapters=args.adapter,
+            wait=args.wait,
+            width=args.width,
+        )
 
     project = config.load(args.config, args.base)
     if args.command == "run":
         out = args.out or os.path.join(project.out, "shot")
-        log = scenarios.run_one(project, args.scenario, width=args.width, height=args.height, wait=args.wait,
-                                virtual=args.virtual, clips=args.clip, out=out)
+        log = scenarios.run_one(
+            project,
+            args.scenario,
+            width=args.width,
+            height=args.height,
+            wait=args.wait,
+            virtual=args.virtual,
+            clips=args.clip,
+            out=out,
+        )
         print(json.dumps(log, indent=1, ensure_ascii=False))
         if args.clip:
             print(f"screenshots: {out}_<n>.png")

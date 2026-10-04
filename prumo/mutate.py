@@ -10,6 +10,7 @@ survived: the function could stop working and the suite would stay green.
 
 The original is restored after every mutant, and on any exit.
 """
+
 import json
 import os
 import random
@@ -41,12 +42,15 @@ def scenarios_running(coverage_files, file, offset):
 
 def knock_out(source, offset):
     brace = source.index("{", offset)
-    return source[:brace + 1] + " return;" + source[brace + 1:]
+    return source[: brace + 1] + " return;" + source[brace + 1 :]
 
 
 def run_suite(config, stems):
-    done = subprocess.run([sys.executable, PRUMO, "--config", config.path, "--base", config.base,
-                           "suite", "--only", ",".join(stems)], capture_output=True, text=True)
+    done = subprocess.run(
+        [sys.executable, PRUMO, "--config", config.path, "--base", config.base, "suite", "--only", ",".join(stems)],
+        capture_output=True,
+        text=True,
+    )
     failed = [line for line in done.stdout.splitlines() if line.startswith("FAIL")]
     return done.returncode != 0, failed
 
@@ -79,8 +83,11 @@ def main(config, only=None, sample=None, seed=1):
             finally:
                 _write(config, file, originals[file])
             results.append((name, killed))
-            print(f"{'KILLED  ' if killed else 'SURVIVED'} {file + ':' + name:<40} by {', '.join(stems)}"
-                  + (f"  ({failed[0].split()[1]} failed)" if failed else ""), flush=True)
+            print(
+                f"{'KILLED  ' if killed else 'SURVIVED'} {file + ':' + name:<40} by {', '.join(stems)}"
+                + (f"  ({failed[0].split()[1]} failed)" if failed else ""),
+                flush=True,
+            )
     finally:
         for file, text in originals.items():
             _write(config, file, text)

@@ -12,6 +12,7 @@ scenario reports those regions under a key in its log (`--ignore-from
 LOG.json --ignore-key dynamic`, boxes as {x, y, width, height}) and they are
 masked out. Needs Pillow.
 """
+
 import json
 
 
@@ -19,9 +20,15 @@ def masked_boxes(log_path, key="dynamic", scale=2.0):
     """Regions the scenario reported as generated per load, in image pixels."""
     with open(log_path, encoding="utf-8") as log:
         boxes = json.load(log).get(key) or []
-    return [(round(b["x"] * scale), round(b["y"] * scale),
-             round((b["x"] + b["width"]) * scale), round((b["y"] + b["height"]) * scale))
-            for b in boxes]
+    return [
+        (
+            round(b["x"] * scale),
+            round(b["y"] * scale),
+            round((b["x"] + b["width"]) * scale),
+            round((b["y"] + b["height"]) * scale),
+        )
+        for b in boxes
+    ]
 
 
 def compare(before_path, after_path, out_path=None, tolerance=0, ignore=()):

@@ -7,6 +7,7 @@ ran. A rule applied or a function run in any one run counts as reached. What
 is left was never exercised by any scenario, so no check can be protecting
 it: either the code is dead, or a state of the page has no scenario yet.
 """
+
 import glob
 import json
 import os
@@ -47,8 +48,11 @@ def shipped(publish_dir, extension):
     relative to it: read from disk rather than from the runs, so a file no
     run loaded still counts, as entirely unreached. Prumo's own are left out."""
     paths = glob.glob(os.path.join(publish_dir, "**", "*" + extension), recursive=True)
-    return sorted(os.path.relpath(path, publish_dir).replace(os.sep, "/") for path in paths
-                  if not os.path.basename(path).startswith("prumo-"))
+    return sorted(
+        os.path.relpath(path, publish_dir).replace(os.sep, "/")
+        for path in paths
+        if not os.path.basename(path).startswith("prumo-")
+    )
 
 
 def files(directory):
@@ -105,8 +109,10 @@ def report(coverage_files, publish_dir):
     print(f"\ncoverage across {len(coverage_files)} runs")
     print(f"  styles      {len(rules) - len(unused_rules)} of {len(rules)} rules applied at least once")
     modules = len({key[0] for key in named})
-    print(f"  scripts     {len(named) - len(unrun)} of {len(named)} functions in "
-          f"{modules} module{'' if modules == 1 else 's'} ran at least once")
+    print(
+        f"  scripts     {len(named) - len(unrun)} of {len(named)} functions in "
+        f"{modules} module{'' if modules == 1 else 's'} ran at least once"
+    )
     if unused_rules:
         print("\n  rules never applied:")
         for file, start in unused_rules:

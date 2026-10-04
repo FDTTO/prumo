@@ -7,6 +7,26 @@ on:
     branches: [ "main" ]
 
 jobs:
+  # The browser scripts and the Python, in the format and lint rules of the
+  # projects Prumo checks.
+  style:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Format and lint the scripts
+        run: npx --yes @biomejs/biome@2.5.15 ci
+
+      - name: Format and lint the Python
+        run: pipx run ruff==0.16.10 check && pipx run ruff==0.16.10 format --check
+
   # Prumo's own checks against a fixture site, every guard both ways, in the
   # browser each runner image ships: Chrome on Linux, Edge on Windows, where
   # the browser hands off to another process and holds its profile locked.

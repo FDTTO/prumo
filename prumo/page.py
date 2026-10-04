@@ -5,6 +5,7 @@ adapters the project names. Everything Prumo writes to the publish folder is
 named prumo-*, is removed when the run ends, and is never counted as the
 project's own code.
 """
+
 import contextlib
 import os
 import re
@@ -26,8 +27,10 @@ def served(config):
 def _styling(page):
     """The stylesheets a document loads and the styles it inlines, in order."""
     links = re.findall(r'<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"', page)
-    inline = [re.sub(r"/\*.*?\*/|\s+", " ", block, flags=re.S).strip()
-              for block in re.findall(r"<style>(.*?)</style>", page, flags=re.S)]
+    inline = [
+        re.sub(r"/\*.*?\*/|\s+", " ", block, flags=re.S).strip()
+        for block in re.findall(r"<style>(.*?)</style>", page, flags=re.S)
+    ]
     return links, inline
 
 
@@ -44,7 +47,11 @@ def ensure_same_styling(config):
         return
     mirrored, harness = _styling(served(config)), _styling(_harness(config))
     if mirrored != harness:
-        raise SystemExit(f"{os.path.basename(config.harness)} styles the page differently from {config.mirror}:\n  served:  {mirrored}\n  harness: {harness}")
+        raise SystemExit(
+            f"{os.path.basename(config.harness)} styles the page differently from {config.mirror}:\n"
+            f"  served:  {mirrored}\n"
+            f"  harness: {harness}"
+        )
 
 
 def own_files(config):

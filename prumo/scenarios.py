@@ -18,6 +18,7 @@ file, sets how it runs:
 A run fails when a check fails, a console error is logged, or it never calls
 done().
 """
+
 import concurrent.futures
 import glob
 import json
@@ -88,8 +89,14 @@ def suite(config, directory=None, only=None, jobs=3, verbose=False, with_coverag
     def execute(run):
         stem, width, settings, name = run
         out = os.path.join(config.out, f"{stem}-{width}")
-        return browser.run(config.url(name), out, wait=settings["wait"], width=width, virtual=settings["virtual"],
-                           coverage=config.url() if with_coverage else None)
+        return browser.run(
+            config.url(name),
+            out,
+            wait=settings["wait"],
+            width=width,
+            virtual=settings["virtual"],
+            coverage=config.url() if with_coverage else None,
+        )
 
     with page.published(config, pages):
         shared = [run for run in runs if not run[2]["alone"]]

@@ -1,10 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "files": {
-    "includes": [
-      "browser/**/*.js",
-      "tests/fixture/**/*.{js,css}"
-    ]
+    "includes": ["browser/**/*.js", "tests/fixture/**/*.{js,css}"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -35,9 +32,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "tests/fixture/**"
-      ],
+      "includes": ["tests/fixture/**"],
       "linter": {
         "rules": {
           "correctness": {

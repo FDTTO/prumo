@@ -23,6 +23,7 @@ that boots what is checked. `mirror` is the served page the harness stands in
 for: its module preloads are copied in, and a harness styled differently from
 it is refused. Paths are relative to the folder holding prumo.json.
 """
+
 import hashlib
 import json
 import os
@@ -93,7 +94,7 @@ def load(path=None, base=None):
 
     for required in ("base", "publish", "harness"):
         if required not in raw:
-            raise SystemExit(f"{path}: missing \"{required}\"")
+            raise SystemExit(f'{path}: missing "{required}"')
     fidelity = raw.get("fidelity") or {}
     # "/app/" for a folder, "/" for the root: never "//", which a browser
     # reads as a protocol-relative URL to another host.
