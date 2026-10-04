@@ -44,7 +44,8 @@ def _served(folder, at):
         server = _QuietServer(("127.0.0.1", 0), functools.partial(_QuietHandler, directory=work))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
-            yield "http://127.0.0.1:%d/%s" % (server.server_address[1], at.strip("/") + "/" if at.strip("/") else "")
+            prefix = at.strip("/") + "/" if at.strip("/") else ""
+            yield f"http://127.0.0.1:{server.server_address[1]}/{prefix}"
         finally:
             server.shutdown()
             server.server_close()
@@ -57,9 +58,9 @@ def main(scenario, url=None, serve=None, at="/", adapters=(), wait=30000, width=
         raise SystemExit("prumo visit needs a URL or a folder to serve, not both")
     os.makedirs(browser.OUT, exist_ok=True)
     probe = os.path.join(browser.OUT, "visit.inject.js")
-    sources = [browser.script("core.js")] + [browser.script("adapters/%s.js" % name) for name in adapters]
+    sources = [browser.script("core.js")] + [browser.script(f"adapters/{name}.js") for name in adapters]
     with open(probe, "w", encoding="utf-8") as target:
-        target.write("\n".join(sources) + "\n(function () {\n%s\n})();\n" % page.read(scenario))
+        target.write("\n".join(sources) + f"\n(function () {{\n{page.read(scenario)}\n}})();\n")
     try:
         with (_served(serve, at) if serve else contextlib.nullcontext(url)) as target_url:
             log = browser.run(target_url, os.path.join(browser.OUT, "visit"), wait=wait, width=width, inject=probe)

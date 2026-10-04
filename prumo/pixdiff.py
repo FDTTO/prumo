@@ -28,7 +28,7 @@ def compare(before_path, after_path, out_path=None, tolerance=0, ignore=()):
     try:
         from PIL import Image, ImageChops, ImageDraw
     except ImportError:
-        raise SystemExit("prumo diff needs Pillow: pip install pillow")
+        raise SystemExit("prumo diff needs Pillow: pip install pillow") from None
     before = Image.open(before_path).convert("RGB")
     after = Image.open(after_path).convert("RGB")
     if before.size != after.size:

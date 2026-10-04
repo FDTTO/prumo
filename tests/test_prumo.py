@@ -46,7 +46,7 @@ class PrumoTest(unittest.TestCase):
         cls.site = os.path.join(cls.work, "site")
         cls.server = _Server(("127.0.0.1", 0), functools.partial(_Quiet, directory=cls.site))
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
-        cls.base = "http://127.0.0.1:%d" % cls.server.server_address[1]
+        cls.base = f"http://127.0.0.1:{cls.server.server_address[1]}"
         cls.config = cls.write_config("prumo.json", "harness.html")
 
     @classmethod

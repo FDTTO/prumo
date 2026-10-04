@@ -18,11 +18,11 @@
 // Why the real clock: a virtual-time budget fast-forwards whenever the page is
 // idle, so anything paced by timers against a real backend runs out its
 // schedule in well under a second and reports a state no reader ever sees.
-const { spawn, spawnSync } = require('child_process');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { parseArgs } = require('util');
+const { spawn, spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { parseArgs } = require('node:util');
 
 const { values: options, positionals } = parseArgs({
   allowPositionals: true,
@@ -121,7 +121,7 @@ async function target() {
       const list = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
       const page = list.find((t) => t.type === 'page');
       if (page) return { ws: page.webSocketDebuggerUrl, port };
-    } catch (e) { /* not up yet */ }
+    } catch { /* not up yet */ }
     await sleep(200);
   }
   throw new Error('DevTools endpoint never came up');
@@ -149,22 +149,22 @@ async function shutdown(port) {
       browser.send(JSON.stringify({ id: 1, method: 'Browser.close' }));
       await sleep(300);
     }
-  } catch (e) { /* the forceful path below still runs */ }
+  } catch { /* the forceful path below still runs */ }
   // A browser that never became controllable may still be starting, and would
   // recreate the profile after it was removed, so it is killed first.
   if (!port) killProfileProcesses();
   if (!owned) return;
   for (let i = 0; i < 20; i++) {
-    try { fs.rmSync(profile, { recursive: true, force: true }); break; } catch (e) { await sleep(250); }
+    try { fs.rmSync(profile, { recursive: true, force: true }); break; } catch { await sleep(250); }
   }
   if (fs.existsSync(profile)) {
     killProfileProcesses();
-    try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) { /* reported below */ }
+    try { fs.rmSync(profile, { recursive: true, force: true }); } catch { /* reported below */ }
   }
   if (!port) await sleep(1000);
   if (fs.existsSync(profile)) {
     killProfileProcesses();
-    try { fs.rmSync(profile, { recursive: true, force: true }); } catch (e) { console.log('error: profile left behind at ' + profile); }
+    try { fs.rmSync(profile, { recursive: true, force: true }); } catch { console.log('error: profile left behind at ' + profile); }
   }
 }
 

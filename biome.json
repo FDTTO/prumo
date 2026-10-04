@@ -1,0 +1,50 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "files": {
+    "includes": [
+      "browser/**/*.js",
+      "tests/fixture/**/*.{js,css}"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
+  "linter": {
+    "rules": {
+      "complexity": {
+        "useArrowFunction": "off",
+        "useOptionalChain": "off",
+        "noImportantStyles": "off"
+      },
+      "style": {
+        "useTemplate": "off",
+        "noDescendingSpecificity": "off",
+        "useConst": "error"
+      },
+      "suspicious": {
+        "noVar": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "tests/fixture/**"
+      ],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    }
+  ]
+}

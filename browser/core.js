@@ -7,11 +7,13 @@
  * than something a scenario has to remember to check.
  */
 (function () {
+  // biome-ignore lint/suspicious/noRedundantUseStrict: a classic script injected by <script src>, not a module
   'use strict';
   /* Every run starts with nothing remembered. */
-  try { localStorage.clear(); sessionStorage.clear(); } catch (ignored) { /* storage blocked */ }
+  try { localStorage.clear(); sessionStorage.clear(); } catch { /* storage blocked */ }
 
-  var log = window.__log = { errors: [], checks: [] };
+  const log = { errors: [], checks: [] };
+  window.__log = log;
   window.L = function (key, value) { log[key] = value; };
 
   /* What makes a scenario a test rather than a probe: a named expectation
@@ -27,22 +29,30 @@
   /* A scenario that provokes an error on purpose declares it, and only the
      errors it names stop counting against the run; everything else still
      fails it. */
-  var allowed = [];
+  const allowed = [];
   window.allowErrors = function (pattern) { allowed.push(pattern); };
 
-  var consoleError = console.error;
-  console.error = function () {
-    var parts = Array.prototype.map.call(arguments, function (a) { return a && a.stack ? a.stack : String(a); });
-    var text = parts.join(' ').slice(0, 400);
-    var expected = allowed.some(function (pattern) { return pattern.test(text); });
-    (expected ? (log.expectedErrors = log.expectedErrors || []) : log.errors).push(text);
-    return consoleError.apply(console, arguments);
+  const consoleError = console.error;
+  console.error = function (...args) {
+    const parts = args.map(function (a) { return a && a.stack ? a.stack : String(a); });
+    const text = parts.join(' ').slice(0, 400);
+    const expected = allowed.some(function (pattern) { return pattern.test(text); });
+    if (expected) {
+      log.expectedErrors ??= [];
+      log.expectedErrors.push(text);
+    } else {
+      log.errors.push(text);
+    }
+    return consoleError.apply(console, args);
   };
   window.addEventListener('error', function (event) {
     log.errors.push('uncaught: ' + (event.error && event.error.stack || event.message).slice(0, 400));
   });
 
-  var input = function (event) { (window.__prumoInput = window.__prumoInput || []).push(event); };
+  const input = function (event) {
+    window.__prumoInput ??= [];
+    window.__prumoInput.push(event);
+  };
 
   window.V = {
     /* Waits for a condition instead of a fixed time, then continues either
@@ -51,12 +61,13 @@
        A timeout is also logged with the condition's source, because the
        check that fails after it can name a symptom far from the cause. */
     until: function (ready, then, timeoutMs) {
-      var deadline = Date.now() + (timeoutMs || 10000);
-      var met = function () { try { return ready(); } catch (ignored) { return false; } };
+      const deadline = Date.now() + (timeoutMs || 10000);
+      const met = function () { try { return ready(); } catch { return false; } };
       (function poll() {
         if (met()) return then();
         if (Date.now() > deadline) {
-          (log.timeouts = log.timeouts || []).push(String(ready).replace(/\s+/g, ' ').slice(0, 140));
+          log.timeouts ??= [];
+          log.timeouts.push(String(ready).replace(/\s+/g, ' ').slice(0, 140));
           return then();
         }
         setTimeout(poll, 100);
@@ -71,22 +82,22 @@
     /* A JWT whose only meaningful claim is its expiry, for pages that read
        `exp` without checking a signature. */
     jwt: function (expiresInSeconds, claims) {
-      var encode = function (value) { return btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
-      var payload = Object.assign({ sub: 'prumo' }, claims || {}, { exp: Math.floor(Date.now() / 1000) + expiresInSeconds });
+      const encode = function (value) { return btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+      const payload = Object.assign({ sub: 'prumo' }, claims || {}, { exp: Math.floor(Date.now() / 1000) + expiresInSeconds });
       return encode({ alg: 'HS256' }) + '.' + encode(payload) + '.sig';
     },
     /* Every rule that matches the element and declares a property matching
        `property`, in source order, with the layer or media it sits in: the
        answer to "why does this value not take" without a debugger. */
     rules: function (selector, property) {
-      var element = document.querySelector(selector), found = [], pattern = new RegExp(property);
-      var walk = function (list, where) {
+      const element = document.querySelector(selector), found = [], pattern = new RegExp(property);
+      const walk = function (list, where) {
         Array.prototype.forEach.call(list, function (rule) {
           if (rule.styleSheet) return walk(rule.styleSheet.cssRules, where + ' @import ' + (rule.layerName || ''));
           if (!rule.selectorText) return rule.cssRules && walk(rule.cssRules, where + ' @' + (rule.name || rule.conditionText || rule.constructor.name));
-          var declared = Array.prototype.filter.call(rule.style, function (name) { return pattern.test(name); });
-          var matches = false;
-          try { matches = element.matches(rule.selectorText); } catch (ignored) { /* a pseudo-element selector */ }
+          const declared = Array.prototype.filter.call(rule.style, function (name) { return pattern.test(name); });
+          let matches = false;
+          try { matches = element.matches(rule.selectorText); } catch { /* a pseudo-element selector */ }
           if (matches && declared.length) {
             found.push(where + ' | ' + rule.selectorText + ' { ' + declared.map(function (name) {
               return name + ': ' + rule.style.getPropertyValue(name) + (rule.style.getPropertyPriority(name) ? ' !important' : '');
@@ -95,7 +106,7 @@
         });
       };
       Array.prototype.forEach.call(document.styleSheets, function (sheet) {
-        try { walk(sheet.cssRules, (sheet.href || 'inline').split('/').pop()); } catch (ignored) { /* cross-origin */ }
+        try { walk(sheet.cssRules, (sheet.href || 'inline').split('/').pop()); } catch { /* cross-origin */ }
       });
       return found;
     },
@@ -104,22 +115,23 @@
        occurs and one element that uses it. A coherent system has few
        values; a rare one is usually a leftover. */
     inventory: function () {
-      var tally = { radius: {}, type: {}, family: {}, border: {} };
-      var name = function (node) {
+      const tally = { radius: {}, type: {}, family: {}, border: {} };
+      const name = function (node) {
         return node.tagName.toLowerCase() + (node.id ? '#' + node.id : '') +
           (typeof node.className === 'string' && node.className.trim() ? '.' + node.className.trim().split(/\s+/).slice(0, 2).join('.') : '');
       };
-      var add = function (kind, value, node) {
+      const add = function (kind, value, node) {
         if (!value || value === '0px' || value === 'none') return;
-        var entry = tally[kind][value] || (tally[kind][value] = { count: 0, example: name(node) });
+        tally[kind][value] ??= { count: 0, example: name(node) };
+        const entry = tally[kind][value];
         entry.count++;
       };
       document.querySelectorAll('body *').forEach(function (node) {
-        var box = node.getBoundingClientRect();
+        const box = node.getBoundingClientRect();
         if (!box.width || !box.height) return;
-        var style = getComputedStyle(node);
+        const style = getComputedStyle(node);
         add('radius', style.borderTopLeftRadius, node);
-        var ownText = Array.prototype.some.call(node.childNodes, function (child) {
+        const ownText = Array.prototype.some.call(node.childNodes, function (child) {
           return child.nodeType === 3 && child.textContent.trim();
         });
         if (ownText) {
@@ -128,9 +140,9 @@
         }
         if (style.borderTopWidth !== '0px' && style.borderTopStyle !== 'none') add('border', style.borderTopWidth + ' ' + style.borderTopColor, node);
       });
-      var result = {};
+      const result = {};
       Object.keys(tally).forEach(function (kind) {
-        var rows = Object.keys(tally[kind]).map(function (value) {
+        const rows = Object.keys(tally[kind]).map(function (value) {
           return tally[kind][value].count + '  ' + value + '  (' + tally[kind][value].example + ')';
         }).sort(function (a, b) { return parseInt(b, 10) - parseInt(a, 10); });
         result[kind] = { distinct: rows.length, values: rows };
@@ -138,13 +150,13 @@
       return result;
     },
     text: function (selector) {
-      var node = document.querySelector(selector);
+      const node = document.querySelector(selector);
       return node ? node.textContent.replace(/\s+/g, ' ').trim() : null;
     },
     box: function (selector) {
-      var node = document.querySelector(selector);
+      const node = document.querySelector(selector);
       if (!node) return null;
-      var r = node.getBoundingClientRect();
+      const r = node.getBoundingClientRect();
       return { left: Math.round(r.left), right: Math.round(r.right), top: Math.round(r.top + scrollY), width: Math.round(r.width), height: Math.round(r.height) };
     }
   };

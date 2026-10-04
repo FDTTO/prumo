@@ -43,7 +43,7 @@ def reference(config, state):
     with open(path, encoding="utf-8") as source:
         match = re.search(r"^\s*//\s*@reference\s+(\S+)", source.read(), re.M)
     if not match:
-        raise SystemExit("%s: no // @reference header" % path)
+        raise SystemExit(f"{path}: no // @reference header")
     file, _, anchor = match.group(1).partition("#")
     url = "file:///" + urllib.parse.quote(os.path.join(config.root, file).replace("\\", "/"), safe="/:")
     return url + ("#" + anchor if anchor else "")
@@ -57,16 +57,16 @@ def _measuring(config, exact):
 def measure_reference(config, state, out, exact, shots):
     width, height = config.fidelity.viewport
     probe = out + ".inject.js"
-    hide = "".join("document.querySelectorAll(%s).forEach(function (n) { n.style.display = 'none'; });" % json.dumps(s)
+    hide = "".join(f"document.querySelectorAll({json.dumps(s)}).forEach(function (n) {{ n.style.display = 'none'; }});"
                    for s in config.fidelity.hide)
     with open(probe, "w", encoding="utf-8") as target:
         target.write(_measuring(config, exact)
                      # What the reference page draws around the design (a state picker) is not the design.
-                     + "addEventListener('DOMContentLoaded', function () { %s });" % hide
+                     + f"addEventListener('DOMContentLoaded', function () {{ {hide} }});"
                      + "addEventListener('load', function () { setTimeout(function () {"
                        " window.__log = { fidelity: window.__fidelity('mock', window.__fidelityRoles), done: true };"
-                       " }, %d); });" % SETTLE_MS)
-    clips = ["({x:0,y:0,width:%d,height:%d})" % (width, height)] if shots else []
+                       f" }}, {SETTLE_MS}); }});")
+    clips = [f"({{x:0,y:0,width:{width},height:{height}}})"] if shots else []
     try:
         # Webfonts come from the network, and a slow load can push the load
         # event past the wait; the log is then empty and the run is retried.
@@ -84,14 +84,14 @@ def measure_page(config, state, out, exact, shots):
     body = (_measuring(config, exact)
             + "".join(page.read(path) + "\n" for path in config.fidelity.include)
             + "var measure = function () { setTimeout(function () {"
-              " L('fidelity', window.__fidelity('real', window.__fidelityRoles)); done(); }, %d); };\n" % SETTLE_MS
+              f" L('fidelity', window.__fidelity('real', window.__fidelityRoles)); done(); }}, {SETTLE_MS}); }};\n"
             + page.read(os.path.join(config.fidelity.states, state + ".js")))
     name = "prumo-fidelity.html"
-    clips = ["({x:0,y:0,width:%d,height:%d})" % (width, height)] if shots else []
+    clips = [f"({{x:0,y:0,width:{width},height:{height}}})"] if shots else []
     with page.published(config, {name: page.build(config, body)}):
         log = browser.run(config.url(name), out, wait=30000, width=width, height=height, clips=clips)
     if "fidelity" not in log:
-        raise SystemExit("the page produced no measurement: %s %s" % (log.get("errors"), log.get("timeouts") or ""))
+        raise SystemExit("the page produced no measurement: {} {}".format(log.get("errors"), log.get("timeouts") or ""))
     return log["fidelity"]
 
 
@@ -103,8 +103,10 @@ def canonical(value):
     def rgba(m):
         r, g, b = (round(float(c) * 255) for c in m.groups()[:3])
         a = m.group(4)
-        return "rgba(%d, %d, %d, %s)" % (r, g, b, ("%g" % round(float(a), 3))) if a and float(a) < 1 else "rgb(%d, %d, %d)" % (r, g, b)
-    return re.sub(r"rgba\(([^)]*), ([\d.]+)\)", lambda m: "rgba(%s, %g)" % (m.group(1), round(float(m.group(2)), 3)),
+        if a and float(a) < 1:
+            return f"rgba({r}, {g}, {b}, {round(float(a), 3):g})"
+        return f"rgb({r}, {g}, {b})"
+    return re.sub(r"rgba\(([^)]*), ([\d.]+)\)", lambda m: f"rgba({m.group(1)}, {round(float(m.group(2)), 3):g})",
                   SRGB.sub(rgba, value))
 
 
@@ -121,9 +123,7 @@ def compared(key, m, r):
         return False
     if key in TEXT and not (m.get("text") or r.get("text") or "stroke" in m):
         return False
-    if key == "borderTopColor" and m.get("borderTopWidth") == "0px" and r.get("borderTopWidth") == "0px":
-        return False
-    return True
+    return not (key == "borderTopColor" and m.get("borderTopWidth") == "0px" and r.get("borderTopWidth") == "0px")
 
 
 def differences(mock, real, only=None, every=False, exact=False):
@@ -140,7 +140,7 @@ def differences(mock, real, only=None, every=False, exact=False):
         if m is None or r is None:
             found.append((role, ["    drawn only in the " + ("page" if m is None else "reference")]))
             continue
-        lines = ["    %-16s %s  ->  %s" % (k, m[k], r.get(k)) for k in m
+        lines = [f"    {k:<16} {m[k]}  ->  {r.get(k)}" for k in m
                  if every or (compared(k, m, r) and not same(m[k], r.get(k), exact))]
         if lines:
             found.append((role, lines))
@@ -149,8 +149,8 @@ def differences(mock, real, only=None, every=False, exact=False):
 
 def main(config, state, only=None, every=False, shots=False, exact=False):
     if state not in states(config):
-        raise SystemExit("No state %s; states: %s" % (state, ", ".join(states(config))))
-    prefix = os.path.join(config.out, "fidelity-%s-" % state)
+        raise SystemExit("No state {}; states: {}".format(state, ", ".join(states(config))))
+    prefix = os.path.join(config.out, f"fidelity-{state}-")
     os.makedirs(config.out, exist_ok=True)
     mock = measure_reference(config, state, prefix + "mock", exact, shots)
     real = measure_page(config, state, prefix + "real", exact, shots)
@@ -159,7 +159,7 @@ def main(config, state, only=None, every=False, shots=False, exact=False):
         print(role)
         print("\n".join(lines))
     drawn = len(mock) - absent
-    print("\n%d of %d roles drawn in this state differ" % (len(found), drawn))
+    print(f"\n{len(found)} of {drawn} roles drawn in this state differ")
     if shots:
-        print("shots: %smock_0.png  %sreal_0.png" % (prefix, prefix))
+        print(f"shots: {prefix}mock_0.png  {prefix}real_0.png")
     return 1 if found else 0

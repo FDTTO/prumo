@@ -31,10 +31,10 @@ def ensure_node():
     if _node_checked:
         return
     if not shutil.which("node"):
-        raise SystemExit("Prumo needs Node %d or later on the PATH" % NODE_MAJOR)
+        raise SystemExit(f"Prumo needs Node {NODE_MAJOR} or later on the PATH")
     version = subprocess.run(["node", "--version"], capture_output=True, text=True).stdout.strip()
     if int(version.lstrip("v").split(".")[0]) < NODE_MAJOR:
-        raise SystemExit("Prumo needs Node %d or later; this is %s" % (NODE_MAJOR, version))
+        raise SystemExit(f"Prumo needs Node {NODE_MAJOR} or later; this is {version}")
     _node_checked.append(version)
 
 
@@ -96,8 +96,7 @@ def _kill_using(profile):
     """Only the processes started on this profile, whatever the browser."""
     if sys.platform == "win32":
         subprocess.run(["powershell", "-NoProfile", "-Command",
-                        "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*%s*' } "
-                        "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
-                        % profile], capture_output=True)
+                        f"Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -like '*{profile}*' }} "
+                        "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"], capture_output=True)
     else:
         subprocess.run(["pkill", "-KILL", "-f", profile], capture_output=True)

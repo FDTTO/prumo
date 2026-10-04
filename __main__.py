@@ -94,7 +94,7 @@ def main(argv=None):
                                 virtual=args.virtual, clips=args.clip, out=out)
         print(json.dumps(log, indent=1, ensure_ascii=False))
         if args.clip:
-            print("screenshots: %s_<n>.png" % out)
+            print(f"screenshots: {out}_<n>.png")
         return 1 if scenarios.failed(log) else 0
     if args.command == "suite":
         return scenarios.suite(project, args.directory, args.only, args.jobs, args.verbose, args.coverage)

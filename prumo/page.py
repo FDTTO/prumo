@@ -44,13 +44,12 @@ def ensure_same_styling(config):
         return
     mirrored, harness = _styling(served(config)), _styling(_harness(config))
     if mirrored != harness:
-        raise SystemExit("%s styles the page differently from %s:\n  served:  %s\n  harness: %s"
-                         % (os.path.basename(config.harness), config.mirror, mirrored, harness))
+        raise SystemExit(f"{os.path.basename(config.harness)} styles the page differently from {config.mirror}:\n  served:  {mirrored}\n  harness: {harness}")
 
 
 def own_files(config):
     """Prumo's scripts as the page loads them: the core, then each adapter."""
-    return [("prumo-core.js", "core.js")] + [("prumo-%s.js" % name, "adapters/%s.js" % name) for name in config.adapters]
+    return [("prumo-core.js", "core.js")] + [(f"prumo-{name}.js", f"adapters/{name}.js") for name in config.adapters]
 
 
 def build(config, body):
@@ -65,10 +64,10 @@ def build(config, body):
         # times is the load a reader gets.
         preloads = re.findall(r'<link rel="modulepreload"[^>]*>', served(config))
         page = page.replace("</head>", "\n".join(preloads) + "\n</head>", 1)
-    scripts = "".join('<script src="%s%s"></script>\n' % (config.publish_url, name) for name, _ in own_files(config))
+    scripts = "".join(f'<script src="{config.publish_url}{name}"></script>\n' for name, _ in own_files(config))
     if page.count("</body>") != 1:
-        raise SystemExit("%s must close its body exactly once" % config.harness)
-    return page.replace("</body>", "%s<script>\n(function () {\n%s\n})();\n</script>\n</body>" % (scripts, body), 1)
+        raise SystemExit(f"{config.harness} must close its body exactly once")
+    return page.replace("</body>", f"{scripts}<script>\n(function () {{\n{body}\n}})();\n</script>\n</body>", 1)
 
 
 def read(path):
@@ -81,7 +80,7 @@ def published(config, pages):
     """Writes Prumo's scripts and `pages` ({name: html}) to the publish folder
     for the duration of a run, and removes them whatever happens."""
     if not os.path.isdir(config.publish_dir):
-        raise SystemExit("No %s: build the app first." % config.publish_dir)
+        raise SystemExit(f"No {config.publish_dir}: build the app first.")
     ensure_same_styling(config)
     written = []
     try:

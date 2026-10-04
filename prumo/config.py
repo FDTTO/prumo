@@ -76,7 +76,7 @@ def find(start):
             return candidate
         parent = os.path.dirname(folder)
         if parent == folder:
-            raise SystemExit("No %s here or in any folder above %s" % (FILE, os.path.abspath(start)))
+            raise SystemExit(f"No {FILE} here or in any folder above {os.path.abspath(start)}")
         folder = parent
 
 
@@ -93,7 +93,7 @@ def load(path=None, base=None):
 
     for required in ("base", "publish", "harness"):
         if required not in raw:
-            raise SystemExit("%s: missing \"%s\"" % (path, required))
+            raise SystemExit(f"{path}: missing \"{required}\"")
     fidelity = raw.get("fidelity") or {}
     # "/app/" for a folder, "/" for the root: never "//", which a browser
     # reads as a protocol-relative URL to another host.

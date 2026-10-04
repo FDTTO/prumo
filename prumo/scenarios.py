@@ -73,7 +73,7 @@ def suite(config, directory=None, only=None, jobs=3, verbose=False, with_coverag
         wanted = [name.strip() for name in only.split(",") if name.strip()]
         scenarios = [s for s in scenarios if any(name in os.path.basename(s) for name in wanted)]
     if not scenarios:
-        raise SystemExit("No scenarios in %s" % directory)
+        raise SystemExit(f"No scenarios in {directory}")
 
     runs, pages = [], {}
     for path in scenarios:
@@ -81,20 +81,20 @@ def suite(config, directory=None, only=None, jobs=3, verbose=False, with_coverag
         html = page.build(config, page.read(path))
         stem = os.path.splitext(os.path.basename(path))[0]
         for width in settings["widths"]:
-            name = "prumo-%s-%d.html" % (stem, width)
+            name = f"prumo-{stem}-{width}.html"
             pages[name] = html
             runs.append((stem, width, settings, name))
 
     def execute(run):
         stem, width, settings, name = run
-        out = os.path.join(config.out, "%s-%d" % (stem, width))
+        out = os.path.join(config.out, f"{stem}-{width}")
         return browser.run(config.url(name), out, wait=settings["wait"], width=width, virtual=settings["virtual"],
                            coverage=config.url() if with_coverage else None)
 
     with page.published(config, pages):
         shared = [run for run in runs if not run[2]["alone"]]
         with concurrent.futures.ThreadPoolExecutor(max_workers=jobs) as pool:
-            logs = dict(zip([run[3] for run in shared], pool.map(execute, shared)))
+            logs = dict(zip([run[3] for run in shared], pool.map(execute, shared), strict=True))
         for run in runs:
             if run[2]["alone"]:
                 logs[run[3]] = execute(run)
@@ -118,14 +118,14 @@ def report(stem, width, log, verbose):
     # A wait that ran out is shown even when the run passes: a condition that
     # never holds is a sleep in disguise, and the checks after it pass anyway.
     waited_out = log.get("timeouts") or []
-    print("%s %-22s %5dpx  %d/%d checks%s%s" % ("PASS" if ok else "FAIL", stem, width, len(passed), len(checks),
-                                               "  %d console errors" % len(errors) if errors else "",
-                                               "  %d wait%s ran out" % (len(waited_out), "" if len(waited_out) == 1 else "s")
-                                               if waited_out else ""))
+    verdict = "PASS" if ok else "FAIL"
+    errors_note = f"  {len(errors)} console errors" if errors else ""
+    waits_note = f"  {len(waited_out)} wait{'' if len(waited_out) == 1 else 's'} ran out" if waited_out else ""
+    print(f"{verdict} {stem:<22} {width:5d}px  {len(passed)}/{len(checks)} checks{errors_note}{waits_note}")
     for c in checks:
         if verbose or not c["pass"]:
             detail = "" if c["pass"] or c["detail"] is None else "  -> " + json.dumps(c["detail"], ensure_ascii=False)
-            print("       %s %s%s" % ("ok  " if c["pass"] else "FAIL", c["name"], detail))
+            print("       {} {}{}".format("ok  " if c["pass"] else "FAIL", c["name"], detail))
     for error in errors:
         print("       error: " + error.splitlines()[0][:200])
     for waited in waited_out:
